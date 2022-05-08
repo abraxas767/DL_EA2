@@ -88,6 +88,8 @@ function setupCanvas(){
   neuronSlider.elt.oninput = () =>{NEURON_COUNT = neuronSlider.elt.value;applyChanges();}
   let scatterSlider = select('#scatterValue');
   scatterSlider.elt.oninput = () => {SCATTER = scatterSlider.elt.value;applyChanges();}
+  let synapticSlider = select('#synapticProb');
+  synapticSlider.elt.oninput = () => {SYNAPTIC_PROB = synapticSlider.elt.value;applyChanges();}
   let redraw = select('#redraw');
   redraw.elt.onclick = () => {applyChanges();}
   let stimulate = select('#stimulate');
@@ -112,7 +114,7 @@ function setupSynapes(){
       // iterate through neurons in previous layer
       neuralNet[i-1].forEach((pNeuron)=>{
         // if random value is bigger than synaptic probability
-        if(Math.random() >= SYNAPTIC_PROB){
+        if(Math.random() <= SYNAPTIC_PROB){
           // make a connection
           neuron.synapses.push(pNeuron);
         }
