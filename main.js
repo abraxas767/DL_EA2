@@ -1,9 +1,10 @@
+const NET_PADDING = 0.5;
+
 let LAYER_COUNT = 5;
 let NEURON_COUNT = 5;
-let NET_PADDING = 0.5;
 let SYNAPTIC_PROB = 1;
 let SCATTER = 0;
-let STIMULATION = 10;
+let STIMULATION = 5;
 
 let neuralNet = [];
 let drawSynapses = [];
@@ -19,6 +20,9 @@ var yVal = 0;
 class Neuron {
   layer = 0;
   index = 0;
+  threshold = 60;
+  potential = 60;
+  currentMembranePotential = 30;
   x = 0
   y = 0
   diameter = 10
@@ -28,12 +32,7 @@ class Neuron {
 }
 
 function clearNeuralNet(){neuralNet = [];}
-
-function applyChanges(){
-    clearNeuralNet();
-    setupNeurons();
-    setupSynapes();
-}
+function applyChanges(){clearNeuralNet();setupNeurons();setupSynapes();}
 
 function setupDynamicChart(){
   var dps = [];
@@ -53,16 +52,17 @@ function setupDynamicChart(){
       markerType: "none",
     }]
   })
-  var updateInterval = 500;
+  var updateInterval = 50;
   // number of points visible at any point in time
-  var dataLength = 250;
+  var dataLength = 1000;
 
   var updateChart = function (count) {
+    if(selectedNeuron == null){return;}
     count = count || 1;
     for (var j = 0; j < count; j++) {
-      yVal = yVal;
+      yVal = selectedNeuron.currentMembranePotential;
       dps.push({x: xVal,y: yVal});
-      xVal+=0.5;
+      xVal+=0.1;
     }
     if (dps.length > dataLength) {dps.shift();}
     chart.render();
@@ -92,10 +92,15 @@ function setupCanvas(){
   synapticSlider.elt.oninput = () => {SYNAPTIC_PROB = synapticSlider.elt.value;applyChanges();}
   let redraw = select('#redraw');
   redraw.elt.onclick = () => {applyChanges();}
-  let stimulate = select('#stimulate');
-  stimulate.elt.onclick = () => {yVal += STIMULATION;}
   selectedLayerDisplay = select('#selectedLayer');
   selectedNeuronDisplay = select('#selectedNeuron');
+
+  let stimulate = select('#stimulate');
+  stimulate.elt.onclick = () => {
+    if(selectedNeuron == null){return;}
+    selectedNeuron.currentMembranePotential += STIMULATION;
+    //yVal += STIMULATION;
+  }
 
   setupDynamicChart();
 }
@@ -160,14 +165,29 @@ function onNeuronSelect(neuron){
   selectedLayerDisplay.elt.innerHTML = neuron.layer;
 }
 
+function onThresholdCrossed(neuron){
+  // draw signal
+  let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
+  // reset to resting potential
+  neuron.currentMembranePotential = 30;
+  // propagate signal to connected neurons
+  neuron.synapses.forEach((pNeuron)=>{
+    pNeuron.currentMembranePotential += pNeuron.potential;
+  });
+}
+
 function draw(){
   background(50);
 
   // draw neurons
   neuralNet.forEach((layer)=>{
+
     // draw neuron
     layer.forEach((neuron)=>{
       let cir = circle(neuron.x, neuron.y, neuron.diameter);
+
+      // check if a neuron reached threshold
+      if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
 
       if(
         mouseX > neuron.x-neuron.diameter &&
@@ -181,12 +201,13 @@ function draw(){
 
       } else {cir.fill(neuron.c);}
       noStroke();
+
       // draw synapes
       neuron.synapses.forEach((pNeuron)=>{
         stroke(color(neuron.c.levels[0], neuron.c.levels[1], neuron.c.levels[2], 60));
         line(pNeuron.x, pNeuron.y, neuron.x, neuron.y);
       });
+
     });
   })
-
 }
