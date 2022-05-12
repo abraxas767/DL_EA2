@@ -5,6 +5,9 @@ let NEURON_COUNT = 5;
 let SYNAPTIC_PROB = 1;
 let SCATTER = 0;
 let STIMULATION = 5;
+let MODEL = 'blob';
+let BACKWARDS_CONNECTIONS = false;
+let RECREATIONAL_TIME = 500;
 
 let neuralNet = [];
 let drawSynapses = [];
@@ -18,11 +21,15 @@ var xVal = 0;
 var yVal = 0;
 
 class Neuron {
+  blinkFrames = 10;
+  timeLastSpiked = 0;
+  currentBlink = 0;
   layer = 0;
   index = 0;
   threshold = 60;
-  potential = 60;
+  potential = 10;
   currentMembranePotential = 30;
+  RESTING_POTENTIAL = 30;
   x = 0
   y = 0
   diameter = 10
@@ -54,7 +61,7 @@ function setupDynamicChart(){
   })
   var updateInterval = 50;
   // number of points visible at any point in time
-  var dataLength = 1000;
+  var dataLength = 800;
 
   var updateChart = function (count) {
     if(selectedNeuron == null){return;}
@@ -110,46 +117,75 @@ function getRandomNumberBetween(min,max){
 }
 
 function setupSynapes(){
-  // for every layer in net
-  for(let i=0;i<neuralNet.length;i++){
-    // ignore input-layer (first layer)
-    if(i==0){continue;}
-    // for every neuron
-    neuralNet[i].forEach((neuron)=>{
-      // iterate through neurons in previous layer
-      neuralNet[i-1].forEach((pNeuron)=>{
-        // if random value is bigger than synaptic probability
-        if(Math.random() <= SYNAPTIC_PROB){
-          // make a connection
+  if(MODEL == 'layer'){
+    // for every layer in net
+    for(let i=0;i<neuralNet.length;i++){
+      // ignore input-layer (first layer)
+      if(i==0){continue;}
+      // for every neuron
+      neuralNet[i].forEach((neuron)=>{
+        // iterate through neurons in previous layer
+        neuralNet[i-1].forEach((pNeuron)=>{
+          // if random value is bigger than synaptic probability
+          if(Math.random() <= SYNAPTIC_PROB){
+            // make a connection
+            neuron.synapses.push(pNeuron);
+          }
+        });
+        // if no connections where made, make at least one
+        if(neuron.synapses.length == 0){
+          let prLayer = neuralNet[i-1]
+          let pNeuron = prLayer[getRandomNumberBetween(0, prLayer.length-1)];
           neuron.synapses.push(pNeuron);
         }
       });
-      // if no connections where made, make at least one
-      if(neuron.synapses.length == 0){
-        let prLayer = neuralNet[i-1]
-        let pNeuron = prLayer[getRandomNumberBetween(0, prLayer.length-1)];
-        neuron.synapses.push(pNeuron);
-      }
+    }
+  } else if(MODEL == 'blob'){
+    neuralNet.forEach((neuron)=>{
+      neuralNet.forEach((dNeuron)=>{
+        // return if connection was already made
+        if(dNeuron.synapses.includes(neuron) && !BACKWARDS_CONNECTIONS){return;}
+        // return if neuron inspects itself haha
+        if(neuron == dNeuron){return;}
+        // calculate distance from each neuron to each other neuron
+        let xDist = Math.abs(neuron.x - dNeuron.x);
+        let yDist = Math.abs(neuron.y - dNeuron.y);
+        // absolute distance between the two neurons
+        let absDist = Math.sqrt(xDist**2 + yDist**2);
+        if(absDist*0.001 <= SYNAPTIC_PROB){neuron.synapses.push(dNeuron);}
+      });
     });
   }
 }
 
 function setupNeurons(){
-  const distY = height/NEURON_COUNT;
-  const distX = width/LAYER_COUNT;
-  for(let c=1;c<=LAYER_COUNT;c++){
-    let layer = [];
-    for(let i=1;i<=NEURON_COUNT;i++){
-      let neuron = new Neuron();
-      neuron.layer = c;
-      neuron.index = i;
-      neuron.x = (c*distX - distX/2) + getRandomNumberBetween(-SCATTER, SCATTER);
-      neuron.y = (i*distY - distY/2);
-      let col = color(255, 204, c*25);
-      neuron.c = col;
-      layer.push(neuron);
+  if(MODEL == 'layer'){
+    const distY = height/NEURON_COUNT;
+    const distX = width/LAYER_COUNT;
+    for(let c=1;c<=LAYER_COUNT;c++){
+      let layer = [];
+      for(let i=1;i<=NEURON_COUNT;i++){
+        let neuron = new Neuron();
+        neuron.layer = c;
+        neuron.index = i;
+        neuron.x = (c*distX - distX/2) + getRandomNumberBetween(-SCATTER, SCATTER);
+        neuron.y = (i*distY - distY/2);
+        let col = color(255, 204, c*25);
+        neuron.c = col;
+        layer.push(neuron);
+      }
+      neuralNet.push(layer);
     }
-    neuralNet.push(layer);
+  }else if(MODEL == 'blob'){
+
+    for(let i=1;i<=NEURON_COUNT**2;i++){
+        let neuron = new Neuron();
+        neuron.x = getRandomNumberBetween(0, width);
+        neuron.y = getRandomNumberBetween(0, height);
+        neuron.c = color(255, 204, 185);
+        neuralNet.push(neuron);
+    }
+
   }
 }
 
@@ -166,48 +202,76 @@ function onNeuronSelect(neuron){
 }
 
 function onThresholdCrossed(neuron){
+  console.log(Date.now()-neuron.timeLastSpiked);
+  // DONT SPIKE IF STILL IN RECREATIONAL TIME
+  if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){
+    return;
+  } else {
+    neuron.timeLastSpiked = Date.now();
+  }
+  neuron.currentBlink++;
   // draw signal
   let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
+  neuron.c = color(255,255,255);
   // reset to resting potential
-  neuron.currentMembranePotential = 30;
+  neuron.currentMembranePotential = neuron.RESTING_POTENTIAL;
   // propagate signal to connected neurons
   neuron.synapses.forEach((pNeuron)=>{
     pNeuron.currentMembranePotential += pNeuron.potential;
   });
 }
 
+function onHoverNeuron(neuron){
+  // check if a neuron reached threshold
+  if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
+  cir = circle(neuron.x, neuron.y, neuron.diameter);
+
+  // check if neuron is in blinking stage and stay blinking if so
+  if(neuron.currentBlink != 0 && neuron.currentBlink <= neuron.blinkFrames){
+    cir = circle(neuron.x, neuron.y, neuron.diameter+20);
+    neuron.currentBlink++;
+  } else {
+    neuron.currentBlink = 0;
+  }
+
+  if(
+    mouseX > neuron.x-neuron.diameter &&
+    mouseX < neuron.x + neuron.diameter &&
+    mouseY > neuron.y-neuron.diameter &&
+    mouseY < neuron.y + neuron.diameter
+  ){
+    cir = circle(neuron.x, neuron.y, neuron.diameter+20);
+    if(mouseIsPressed){onNeuronSelect(neuron);}
+  } else {cir.fill(neuron.c);}
+  noStroke();
+}
+
 function draw(){
   background(50);
 
-  // draw neurons
-  neuralNet.forEach((layer)=>{
+  if(MODEL == 'layer'){
+    // draw neurons
+    neuralNet.forEach((layer)=>{
+      // draw neuron
+      layer.forEach((neuron)=>{
+        let cir = circle(neuron.x, neuron.y, neuron.diameter);
+        onHoverNeuron(neuron);
+        // draw synapes
+        neuron.synapses.forEach((pNeuron)=>{
+          stroke(color(neuron.c.levels[0], neuron.c.levels[1], neuron.c.levels[2], 60));
+          line(pNeuron.x, pNeuron.y, neuron.x, neuron.y);
+        });
 
-    // draw neuron
-    layer.forEach((neuron)=>{
-      let cir = circle(neuron.x, neuron.y, neuron.diameter);
+      });
+    });
 
-      // check if a neuron reached threshold
-      if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
-
-      if(
-        mouseX > neuron.x-neuron.diameter &&
-        mouseX < neuron.x + neuron.diameter &&
-        mouseY > neuron.y-neuron.diameter &&
-        mouseY < neuron.y + neuron.diameter
-      ){
-        let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
-
-        if(mouseIsPressed){onNeuronSelect(neuron);}
-
-      } else {cir.fill(neuron.c);}
-      noStroke();
-
-      // draw synapes
+  } else if(MODEL == 'blob'){
+    neuralNet.forEach((neuron)=>{
+      onHoverNeuron(neuron);
       neuron.synapses.forEach((pNeuron)=>{
         stroke(color(neuron.c.levels[0], neuron.c.levels[1], neuron.c.levels[2], 60));
         line(pNeuron.x, pNeuron.y, neuron.x, neuron.y);
       });
-
     });
-  })
+  }
 }
