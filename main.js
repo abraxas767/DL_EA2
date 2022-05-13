@@ -8,6 +8,7 @@ let STIMULATION = 5;
 let MODEL = 'blob';
 let BACKWARDS_CONNECTIONS = false;
 let RECREATIONAL_TIME = 500;
+let RANDOMIZE_POTENTIAL = false;
 
 let neuralNet = [];
 let drawSynapses = [];
@@ -16,26 +17,41 @@ let selectedNeuron = null;
 let selectedLayerDisplay = "null";
 let selectedNeuronDisplay = "null";
 
+// Input current: I = Q/t -> charge / time
+const INPUT_CHARGE = 0.5; // C -> coulomb
+const IMPULS_TIME = 100; // ms -> milliseconds
+
 // for dynamic chart
 var xVal = 0;
-var yVal = 0;
+var yVal = 20;
 
 class Neuron {
+  // I = Q/t
+  current = 0;
+  // difference in electric potential between interior and
+  // exterior of the membran
+  RESTING_POTENTIAL = -70;
+  currentMembranePotential = -70 // mV
+  threshold = -55; // mV
+  RESISTANCE = 1; // ohm
+  // holds all postsynaptic connections
+  synapses = [];
+  // holds correlating synaptic weights
+  synapticWeights = [];
+  // used to determine weither a neuron is in the process
+  // of beeing stimulated
+  stimulateDT = null;
+  dt = 0;
   blinkFrames = 10;
   timeLastSpiked = 0;
   currentBlink = 0;
   layer = 0;
   index = 0;
-  threshold = 60;
   potential = 10;
-  currentMembranePotential = 30;
-  RESTING_POTENTIAL = 30;
   x = 0
   y = 0
   diameter = 10
-  synapses = [];
   c = color(255, 204, 0);
-  constructor(){}
 }
 
 function clearNeuralNet(){neuralNet = [];}
@@ -59,9 +75,9 @@ function setupDynamicChart(){
       markerType: "none",
     }]
   })
-  var updateInterval = 50;
+  var updateInterval = 5;
   // number of points visible at any point in time
-  var dataLength = 800;
+  var dataLength = 1500;
 
   var updateChart = function (count) {
     if(selectedNeuron == null){return;}
@@ -103,10 +119,13 @@ function setupCanvas(){
   selectedNeuronDisplay = select('#selectedNeuron');
 
   let stimulate = select('#stimulate');
-  stimulate.elt.onclick = () => {
+  stimulate.elt.onmousedown = () => {
     if(selectedNeuron == null){return;}
-    selectedNeuron.currentMembranePotential += STIMULATION;
-    //yVal += STIMULATION;
+    selectedNeuron.stimulateDT = Date.now();
+  }
+  stimulate.elt.onmouseup = () => {
+    if(selectedNeuron == null){return;}
+    selectedNeuron.stimulateDT = null;
   }
 
   setupDynamicChart();
@@ -152,13 +171,20 @@ function setupSynapes(){
         let yDist = Math.abs(neuron.y - dNeuron.y);
         // absolute distance between the two neurons
         let absDist = Math.sqrt(xDist**2 + yDist**2);
-        if(absDist*0.001 <= SYNAPTIC_PROB){neuron.synapses.push(dNeuron);}
+        // We dont want the chance for connection to be 100% even for close by neurons
+        let probScalar = 1 + Math.random();
+        if(absDist*0.001 * probScalar <= SYNAPTIC_PROB){
+          neuron.synapses.push(dNeuron);
+          neuron.synapticWeights.push(1);
+        }
       });
     });
   }
 }
 
 function setupNeurons(){
+
+  // LAYER ARCHITECTURE
   if(MODEL == 'layer'){
     const distY = height/NEURON_COUNT;
     const distX = width/LAYER_COUNT;
@@ -176,16 +202,19 @@ function setupNeurons(){
       }
       neuralNet.push(layer);
     }
-  }else if(MODEL == 'blob'){
 
+  // BLOB ARCHITECTURE
+  } else if(MODEL == 'blob'){
     for(let i=1;i<=NEURON_COUNT**2;i++){
         let neuron = new Neuron();
         neuron.x = getRandomNumberBetween(0, width);
         neuron.y = getRandomNumberBetween(0, height);
         neuron.c = color(255, 204, 185);
+        if(RANDOMIZE_POTENTIAL){
+          neuron.potential = getRandomNumberBetween(5, 60);
+        }
         neuralNet.push(neuron);
     }
-
   }
 }
 
@@ -202,38 +231,74 @@ function onNeuronSelect(neuron){
 }
 
 function onThresholdCrossed(neuron){
-  console.log(Date.now()-neuron.timeLastSpiked);
-  // DONT SPIKE IF STILL IN RECREATIONAL TIME
-  if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){
-    return;
-  } else {
-    neuron.timeLastSpiked = Date.now();
-  }
+  //neuron.stimulateDT = Date.now();
+  // check if neuron is still in recreational time and skip if so
+  // else save current time as spike time
+  if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){return;}
+  else {neuron.timeLastSpiked = Date.now();}
+
+  // STYLING ====================
   neuron.currentBlink++;
   // draw signal
   let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
   neuron.c = color(255,255,255);
+  // STYLING ====================
+
   // reset to resting potential
   neuron.currentMembranePotential = neuron.RESTING_POTENTIAL;
-  // propagate signal to connected neurons
+  neuron.current = 0;
+  // eqv. tell all synapses to start firing
   neuron.synapses.forEach((pNeuron)=>{
-    pNeuron.currentMembranePotential += pNeuron.potential;
+    pNeuron.stimulateDT = Date.now();
   });
 }
 
 function onHoverNeuron(neuron){
+  neuron.current = 0;
+
+  // check if an input neuron is stimulated
+  if(neuron.stimulateDT){
+    // to achieve the current I on our membrane we have to
+    // implement Q and t -> INPUT_CHARGE and IMPULS_TIME.
+    // To get a somehow accurate depiction of time we devide
+    // the current framerate (frames per second) with the desired
+    // time (in milliseconds) an electric impuls should produce
+    // --> we get the current I
+    // --> I = Q/t
+    neuron.current += (INPUT_CHARGE / (frameRate() / IMPULS_TIME));
+  }
+  // Voltage in mV
+  // U = I * R -> current * resistance
+  neuron.currentMembranePotential += neuron.current * neuron.RESISTANCE;
+
+  for(let s=0;s<neuron.synapses.length;s++){
+    if(Date.now() - neuron.synapses[s].stimulateDT >= IMPULS_TIME && neuron.synapses[s] != selectedNeuron){
+      neuron.synapses[s].stimulateDT = null;
+    }
+  }
+
+
+
+
+
+  // integrate leaky model
+  //if(neuron.currentMembranePotential > neuron.RESTING_POTENTIAL){}
+
   // check if a neuron reached threshold
   if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
-  cir = circle(neuron.x, neuron.y, neuron.diameter);
 
+
+  // STYLING ====================
+  cir = circle(neuron.x, neuron.y, neuron.diameter);
   // check if neuron is in blinking stage and stay blinking if so
   if(neuron.currentBlink != 0 && neuron.currentBlink <= neuron.blinkFrames){
     cir = circle(neuron.x, neuron.y, neuron.diameter+20);
+    neuron.c = color(255, 255, 255);
     neuron.currentBlink++;
   } else {
+    neuron.c = color(255, 204, 185);
     neuron.currentBlink = 0;
   }
-
   if(
     mouseX > neuron.x-neuron.diameter &&
     mouseX < neuron.x + neuron.diameter &&
@@ -244,6 +309,8 @@ function onHoverNeuron(neuron){
     if(mouseIsPressed){onNeuronSelect(neuron);}
   } else {cir.fill(neuron.c);}
   noStroke();
+  // STYLING ====================
+
 }
 
 function draw(){
