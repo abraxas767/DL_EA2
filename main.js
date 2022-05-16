@@ -1,4 +1,5 @@
 const NET_PADDING = 0.5;
+let stimulusDisplay = null;
 
 let LAYER_COUNT = 5;
 let NEURON_COUNT = 5;
@@ -7,7 +8,7 @@ let SCATTER = 0;
 let STIMULATION = 5;
 let MODEL = 'blob';
 let BACKWARDS_CONNECTIONS = false;
-let RECREATIONAL_TIME = 500;
+let RECREATIONAL_TIME = 200;
 let RANDOMIZE_POTENTIAL = false;
 
 let neuralNet = [];
@@ -103,6 +104,9 @@ function setupCanvas(){
   let canvas = select('main');
   container.child(canvas);
   resizeCanvas(container.width, container.height);
+
+  let currentStimulus = select('#currentStimulus');
+  stimulusDisplay = currentStimulus;
 
   // get slider values
   let layerSlider = select('#layerCount');
@@ -234,8 +238,9 @@ function onThresholdCrossed(neuron){
   //neuron.stimulateDT = Date.now();
   // check if neuron is still in recreational time and skip if so
   // else save current time as spike time
-  if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){return;}
-  else {neuron.timeLastSpiked = Date.now();}
+  if(Date.now() - neuron.timeLastSpiked >= RECREATIONAL_TIME){
+    neuron.timeLastSpiked = Date.now();
+  }
 
   // STYLING ====================
   neuron.currentBlink++;
@@ -257,7 +262,10 @@ function onHoverNeuron(neuron){
   neuron.current = 0;
 
   // check if an input neuron is stimulated
-  if(neuron.stimulateDT){
+  my_if: if(neuron.stimulateDT){
+
+    // prevent stimulus if still in recreational-time
+    if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){break my_if;}
     // to achieve the current I on our membrane we have to
     // implement Q and t -> INPUT_CHARGE and IMPULS_TIME.
     // To get a somehow accurate depiction of time we devide
@@ -315,6 +323,10 @@ function onHoverNeuron(neuron){
 
 function draw(){
   background(50);
+
+  if(selectedNeuron && stimulusDisplay){
+    stimulusDisplay.elt.innerHTML = selectedNeuron.current.toFixed(3);
+  }
 
   if(MODEL == 'layer'){
     // draw neurons
