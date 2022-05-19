@@ -238,16 +238,18 @@ function onThresholdCrossed(neuron){
   //neuron.stimulateDT = Date.now();
   // check if neuron is still in recreational time and skip if so
   // else save current time as spike time
+<<<<<<< HEAD
   if(Date.now() - neuron.timeLastSpiked >= RECREATIONAL_TIME){
     neuron.timeLastSpiked = Date.now();
   }
-
-  // STYLING ====================
-  neuron.currentBlink++;
-  // draw signal
-  let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
-  neuron.c = color(255,255,255);
-  // STYLING ====================
+=======
+  if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){
+    let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
+    neuron.c = color(255,255,255);
+    return;
+  }
+  else {neuron.timeLastSpiked = Date.now();}
+>>>>>>> e5963f9017f31ace130f40ab74fb753df50b3899
 
   // reset to resting potential
   neuron.currentMembranePotential = neuron.RESTING_POTENTIAL;
@@ -320,6 +322,10 @@ function onHoverNeuron(neuron){
   }
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> e5963f9017f31ace130f40ab74fb753df50b3899
   // integrate leaky model
   //if(neuron.currentMembranePotential > neuron.RESTING_POTENTIAL){}
 
@@ -329,15 +335,7 @@ function onHoverNeuron(neuron){
 
   // STYLING ====================
   cir = circle(neuron.x, neuron.y, neuron.diameter);
-  // check if neuron is in blinking stage and stay blinking if so
-  if(neuron.currentBlink != 0 && neuron.currentBlink <= neuron.blinkFrames){
-    cir = circle(neuron.x, neuron.y, neuron.diameter+20);
-    neuron.c = color(255, 255, 255);
-    neuron.currentBlink++;
-  } else {
-    neuron.c = color(255, 204, 185);
-    neuron.currentBlink = 0;
-  }
+
   if(
     mouseX > neuron.x-neuron.diameter &&
     mouseX < neuron.x + neuron.diameter &&
