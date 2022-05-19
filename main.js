@@ -8,7 +8,7 @@ let SCATTER = 0;
 let STIMULATION = 5;
 let MODEL = 'blob';
 let BACKWARDS_CONNECTIONS = false;
-let RECREATIONAL_TIME = 200;
+let RECREATIONAL_TIME = 100;
 let RANDOMIZE_POTENTIAL = false;
 
 let neuralNet = [];
@@ -19,8 +19,8 @@ let selectedLayerDisplay = "null";
 let selectedNeuronDisplay = "null";
 
 // Input current: I = Q/t -> charge / time
-const INPUT_CHARGE = 0.5; // C -> coulomb
-const IMPULS_TIME = 100; // ms -> milliseconds
+const INPUT_CHARGE = 500; // C -> coulomb
+const IMPULS_TIME = 200; // ms -> milliseconds
 
 // for dynamic chart
 var xVal = 0;
@@ -34,8 +34,8 @@ class Neuron {
   RESTING_POTENTIAL = -70;
   currentMembranePotential = -70 // mV
   threshold = -55; // mV
-  RESISTANCE = 1; // ohm
-  // holds all postsynaptic connections
+  MEMBRANE_RESISTANCE = 30; // ohm
+  // holds all postsynaptic cohnnections
   synapses = [];
   // holds correlating synaptic weights
   synapticWeights = [];
@@ -258,35 +258,66 @@ function onThresholdCrossed(neuron){
   });
 }
 
+function log_every(intervall, log){
+  if(frameCount % intervall == 0){
+    console.log(log);
+  }
+}
+
 function onHoverNeuron(neuron){
   neuron.current = 0;
 
   // check if an input neuron is stimulated
-  my_if: if(neuron.stimulateDT){
+  ifStimulation: if(neuron.stimulateDT){
 
     // prevent stimulus if still in recreational-time
-    if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){break my_if;}
+    if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){break ifStimulation;}
     // to achieve the current I on our membrane we have to
     // implement Q and t -> INPUT_CHARGE and IMPULS_TIME.
     // To get a somehow accurate depiction of time we devide
     // the current framerate (frames per second) with the desired
     // time (in milliseconds) an electric impuls should produce
     // --> we get the current I
-    // --> I = Q/t
-    neuron.current += (INPUT_CHARGE / (frameRate() / IMPULS_TIME));
+    // --> I = Q/t in Ampere
+    //neuron.current += (INPUT_CHARGE / (frameRate() / IMPULS_TIME));
+    neuron.current = neuron.currentMembranePotential / neuron.MEMBRANE_RESISTANCE
+    //-70 / 30 = -2.3
+
+    console.log(neuron.currentMembranePotential, neuron.MEMBRANE_RESISTANCE);
   }
+
   // Voltage in mV
   // U = I * R -> current * resistance
-  neuron.currentMembranePotential += neuron.current * neuron.RESISTANCE;
+  // tau * u'(t) = restingpotential - u(t)
+  // tau = R*C
+  // capacitance = Q/u
+  //let volt_t = (neuron.current * neuron.MEMBRANE_RESISTANCE); //+ neuron.RESTING_POTENTIAL;
+  let volt_t = neuron.currentMembranePotential;
+  //let capacitance = neuron.current * (Date.now() - x)  / volt_t;
+  let capacitance = neuron.current / volt_t;
+
+  let tau_t = neuron.MEMBRANE_RESISTANCE * capacitance;
+  //let du_dt = tau_t * (-neuron.RESTING_POTENTIAL - volt_t + neuron.MEMBRANE_RESISTANCE * neuron.current);
+  //let du_dt = (- volt_t + (neuron.MEMBRANE_RESISTANCE * neuron.current)) / tau_t;
+  //let du_dt = (- volt_t + (neuron.MEMBRANE_RESISTANCE * neuron.current)) / tau_t;
+  let du_dt = 0;
+  if(tau_t != 0){
+    du_dt = ((neuron.RESTING_POTENTIAL - volt_t + (neuron.MEMBRANE_RESISTANCE * neuron.current)) * tau_t);
+  }
+  neuron.currentMembranePotential += du_dt;
+
+
+
+  //log_every(5, `volt_t: ${volt_t}; R: ${neuron.MEMBRANE_RESISTANCE}; Q: ${neuron.current}`);
+
+  //neuron.currentMembranePotential += tau_t * (neuron.RESTING_POTENTIAL - volt_t + neuron.MEMBRANE_RESISTANCE * neuron.current);
+
 
   for(let s=0;s<neuron.synapses.length;s++){
     if(Date.now() - neuron.synapses[s].stimulateDT >= IMPULS_TIME && neuron.synapses[s] != selectedNeuron){
       neuron.synapses[s].stimulateDT = null;
     }
   }
-
-
-
 
 
   // integrate leaky model
