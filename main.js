@@ -2,7 +2,7 @@ const NET_PADDING = 0.5;
 let stimulusDisplay = null;
 
 let LAYER_COUNT = 5;
-let NEURON_COUNT = 5;
+let NEURON_COUNT = 2;
 let SYNAPTIC_PROB = 1;
 let SCATTER = 0;
 let STIMULATION = 5;
@@ -20,21 +20,29 @@ let selectedNeuronDisplay = "null";
 
 // Input current: I = Q/t -> charge / time
 const INPUT_CHARGE = 500; // C -> coulomb
-const IMPULS_TIME = 200; // ms -> milliseconds
+const IMPULS_TIME
+= 200; // ms -> milliseconds
+const INPUT_U = 1.5// in volt
+const INPUT_CURRENT = 0.006;
+let CONST_INPUT_CURRENT = 0 // Ampere pro sekunde
 
 // for dynamic chart
 var xVal = 0;
 var yVal = 20;
+
+let time = 0;
+let framesPassed = 0;
+let fps = 60;
 
 class Neuron {
   // I = Q/t
   current = 0;
   // difference in electric potential between interior and
   // exterior of the membran
-  RESTING_POTENTIAL = -70;
-  currentMembranePotential = -70 // mV
-  threshold = -55; // mV
-  MEMBRANE_RESISTANCE = 30; // ohm
+  RESTING_POTENTIAL = -0.07;
+  currentMembranePotential = -0.07 // mV
+  threshold = -0.055; // mV
+  MEMBRANE_RESISTANCE = 1; // ohm
   // holds all postsynaptic cohnnections
   synapses = [];
   // holds correlating synaptic weights
@@ -122,14 +130,23 @@ function setupCanvas(){
   selectedLayerDisplay = select('#selectedLayer');
   selectedNeuronDisplay = select('#selectedNeuron');
 
-  let stimulate = select('#stimulate');
-  stimulate.elt.onmousedown = () => {
+
+  let constantStimulation = select('#constant');
+  constantStimulation.elt.onmousedown = () => {
     if(selectedNeuron == null){return;}
+    CONST_INPUT_CURRENT = 0.02;
     selectedNeuron.stimulateDT = Date.now();
   }
-  stimulate.elt.onmouseup = () => {
+  constantStimulation.elt.onmouseup = () => {
     if(selectedNeuron == null){return;}
+    CONST_INPUT_CURRENT = 0;
     selectedNeuron.stimulateDT = null;
+  }
+
+  let stimulate = select('#stimulate');
+  stimulate.elt.onclick = () => {
+    if(selectedNeuron == null){return;}
+    selectedNeuron.currentMembranePotential += INPUT_CURRENT;
   }
 
   setupDynamicChart();
@@ -223,6 +240,7 @@ function setupNeurons(){
 }
 
 function setup(){
+  time = Date.now();
   setupCanvas();
   setupNeurons();
   setupSynapes();
@@ -235,25 +253,9 @@ function onNeuronSelect(neuron){
 }
 
 function onThresholdCrossed(neuron){
-  //neuron.stimulateDT = Date.now();
-  // check if neuron is still in recreational time and skip if so
-  // else save current time as spike time
-<<<<<<< HEAD
-  if(Date.now() - neuron.timeLastSpiked >= RECREATIONAL_TIME){
-    neuron.timeLastSpiked = Date.now();
-  }
-=======
-  if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){
-    let cir = circle(neuron.x, neuron.y, neuron.diameter+20);
-    neuron.c = color(255,255,255);
-    return;
-  }
-  else {neuron.timeLastSpiked = Date.now();}
->>>>>>> e5963f9017f31ace130f40ab74fb753df50b3899
-
+  console.log("spiked");
   // reset to resting potential
   neuron.currentMembranePotential = neuron.RESTING_POTENTIAL;
-  neuron.current = 0;
   // eqv. tell all synapses to start firing
   neuron.synapses.forEach((pNeuron)=>{
     pNeuron.stimulateDT = Date.now();
@@ -267,52 +269,19 @@ function log_every(intervall, log){
 }
 
 function onHoverNeuron(neuron){
-  neuron.current = 0;
-
-  // check if an input neuron is stimulated
-  ifStimulation: if(neuron.stimulateDT){
-
-    // prevent stimulus if still in recreational-time
-    if(Date.now() - neuron.timeLastSpiked <= RECREATIONAL_TIME){break ifStimulation;}
-    // to achieve the current I on our membrane we have to
-    // implement Q and t -> INPUT_CHARGE and IMPULS_TIME.
-    // To get a somehow accurate depiction of time we devide
-    // the current framerate (frames per second) with the desired
-    // time (in milliseconds) an electric impuls should produce
-    // --> we get the current I
-    // --> I = Q/t in Ampere
-    //neuron.current += (INPUT_CHARGE / (frameRate() / IMPULS_TIME));
-    neuron.current = neuron.currentMembranePotential / neuron.MEMBRANE_RESISTANCE
-    //-70 / 30 = -2.3
-
-    console.log(neuron.currentMembranePotential, neuron.MEMBRANE_RESISTANCE);
-  }
-
-  // Voltage in mV
-  // U = I * R -> current * resistance
-  // tau * u'(t) = restingpotential - u(t)
-  // tau = R*C
-  // capacitance = Q/u
-  //let volt_t = (neuron.current * neuron.MEMBRANE_RESISTANCE); //+ neuron.RESTING_POTENTIAL;
-  let volt_t = neuron.currentMembranePotential;
-  //let capacitance = neuron.current * (Date.now() - x)  / volt_t;
-  let capacitance = neuron.current / volt_t;
-
-  let tau_t = neuron.MEMBRANE_RESISTANCE * capacitance;
-  //let du_dt = tau_t * (-neuron.RESTING_POTENTIAL - volt_t + neuron.MEMBRANE_RESISTANCE * neuron.current);
-  //let du_dt = (- volt_t + (neuron.MEMBRANE_RESISTANCE * neuron.current)) / tau_t;
-  //let du_dt = (- volt_t + (neuron.MEMBRANE_RESISTANCE * neuron.current)) / tau_t;
-  let du_dt = 0;
-  if(tau_t != 0){
-    du_dt = ((neuron.RESTING_POTENTIAL - volt_t + (neuron.MEMBRANE_RESISTANCE * neuron.current)) * tau_t);
-  }
-  neuron.currentMembranePotential += du_dt;
 
 
+  // I = R / u
 
-  //log_every(5, `volt_t: ${volt_t}; R: ${neuron.MEMBRANE_RESISTANCE}; Q: ${neuron.current}`);
+  let tau = 1 / Math.floor(fps);
 
-  //neuron.currentMembranePotential += tau_t * (neuron.RESTING_POTENTIAL - volt_t + neuron.MEMBRANE_RESISTANCE * neuron.current);
+  let leaky_current = - tau * (neuron.currentMembranePotential - neuron.RESTING_POTENTIAL);
+
+  let relCurrent = CONST_INPUT_CURRENT / (Math.floor(fps));
+
+  neuron.currentMembranePotential += leaky_current + relCurrent;
+
+  if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
 
 
   for(let s=0;s<neuron.synapses.length;s++){
@@ -321,17 +290,8 @@ function onHoverNeuron(neuron){
     }
   }
 
-
-<<<<<<< HEAD
-=======
-
->>>>>>> e5963f9017f31ace130f40ab74fb753df50b3899
   // integrate leaky model
   //if(neuron.currentMembranePotential > neuron.RESTING_POTENTIAL){}
-
-  // check if a neuron reached threshold
-  if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
-
 
   // STYLING ====================
   cir = circle(neuron.x, neuron.y, neuron.diameter);
@@ -352,6 +312,12 @@ function onHoverNeuron(neuron){
 
 function draw(){
   background(50);
+
+  if(frameRate() <= 10){
+    fps = 60;
+  } else {
+    fps = frameRate();
+  }
 
   if(selectedNeuron && stimulusDisplay){
     stimulusDisplay.elt.innerHTML = selectedNeuron.current.toFixed(3);
