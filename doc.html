@@ -131,10 +131,98 @@ function setupSynapes(){
 
         <p>Resultat: </p>
         <img src="./img/dl.png" alt="" />
+      </section>
+
+      <section>
+
+        <h3>Model</h3>
+
+        <p>
+
+        In dieser Simulation wurde sich an das Leaky-Integrate-and-Fire-Model angelehnt. Hierbei wird die Änderungsrate des Membranpotentials eines Neurons über mehrere Stromstärken I über die Zeit (also I(t)) betrachtet.
+        </p>
+        <p>
+          Die "leaky"-Komponente, welche Ionendiffusion/-transport aus dem Neuron simuliert wird hier einfacher als beim eigentlichen LIF-Model umgesetzt:
+        </p>
+
+        <pre>
+          <code>
+let leaky_current = - tau * (neuron.currentMembranePotential - neuron.RESTING_POTENTIAL);
+neuron.currentMembranePotential += leaky_current;
+          </code>
+        </pre>
+        <p>Hiermit versichern wir uns eines durch eine e-Funktion beschreibbaren Abfalls der Spannung an der Membran. Stimulieren wir nun das Neuron können wir in der Abbildung sehen wie sich die Spannung wieder dem Ruhepotential nähert.</p>
+
+        <img src="./img/uabfall.png" alt="" />
+
+        <p>Das Ruhepotential liegt hier bei für Neuronen typischen -70mV oder -0.07V. Führen wir als nächstes einen Threshold ein der für ein Aktionspotential sowie ein postsynaptisches Signal sorgt. Den Threshold legen wir dabei auf -0.055 Volt. Übersteigt der Spannungswert der Membran den Threshold so leiten wir ein Signal an durch
+        Synapsen verbundene Neuronen weiter. Desweiteren setzen wir den Spannungswert wieder auf das Ruhepotential und befinden uns anschließend in einer Erhohlungsphase in der Das Neuron nicht stimuliert werden kann. Für die Übersichtlichkeit der Simulation wurde diese "Recreational time" auf ungewöhnliche 100ms gelegt.</p>
+
+        <pre>
+          <code>
+// gets called when neuronal threshold is crossed
+function onThresholdCrossed(neuron){
+
+  // schedule impulse for connected neurons
+  neuron.synapses.forEach((pNeuron, index) => {
+    let weight = neuron.synapticWeights[index];
+    pNeuron.impulses.push({t: Date.now(), w: weight});
+  });
+
+  // set recreational time
+  neuron.recreationalTimestamp = Date.now();
+
+  // reset to resting potential
+  neuron.currentMembranePotential = neuron.RESTING_POTENTIAL;
+
+  // draw blinking neuron
+  let cir = circle(neuron.x, neuron.y, neuron.diameter + 20);
+}
+          </code>
+        </pre>
+            <p>Legen wir nun eine konstante Stromstärke von <i>80mA</i> an unser ausgewähltes Neuron sieht das ganze grafisch wie folgt aus:</p>
+
+            <img src="./img/current.png" alt="" />
+            <p>Wie man sieht sind die Kurven trotz konstanter Stromstärke nicht perfekt. Dies liegt an der Berechnung der Stromstärke. Hierbei berechnen wir die Framerate mit ein um eine akkurate Änderungsrate der Spannung zu erhalten:</p>
+            <pre>
+              <code>
+let relCurrent = CONST_INPUT_CURRENT / (Math.floor(fps));
+              </code>
+            </pre>
+
+            <h3>Postsynaptische Signale</h3>
+Stromstärke, welche durch ein synaptisches Gewicht verstärkt oder geschwächt wird.
+            <p>Als nächstes wollen wir die Signale auch weiterleiten. In unserer Simulation hat ein postsynaptisches Signal eine immer gleiche Stromstärke, welche durch ein synaptisches Gewicht verstärkt oder geschwächt wird. Ein postSynaptisches Signal dauert hier genau 100ms.</p>
+
+            <pre>
+              <code>
+
+let preSynapticCurrent = 0;
+
+// iterate through scheduled impulses
+neuron.impulses.forEach((impuls)=> {
+  // if impulse time
+  if(Date.now() - impuls.t <= 100){
+    // U = I * R
+    // Delta U = synaptic-weight(impuls.w) * (I(t) * R)
+    preSynapticCurrent = impuls.w * ((POST_SYNAPTIC_IMPULSE * neuron.MEMBRANE_RESISTANCE) / Math.floor(fps));
+
+  // if impulse over
+  } else if(Date.now() - impuls.t <= 0){
+    neuron.impulses = arrayRemove(neuron.impulses, impuls);
+  }
+});
+              </code>
+            </pre>
+            <p>Wie schon vorher rechnen wir hier auch immer die zeitliche Komponente fps (Frames per second) mit ein um eine akkurate Repräsentation unserer Stromstärke über die Zeit zu bekommen. Schon jetzt können wir sehen wie sich das Netz aufschaukeln kann und das Ausgangsneuron selbst nach Abbruch externer Stimulation weiterhin Signale empfängt. Grün markiert hier die Dauer des externen Stimulus. Der weitere Verlauf ist durch eingehende Impulse verbundener Neuronen zu erklären.</p>
+
+            <img src="./img/xCurrent.png" alt="" />
+
+            <h3>Hebbs Rule</h3>
 
       </section>
-      <div id="spacing"></div>
 
+      <div id="spacing"></div>
     </div>
   </div>
   <a id="back" href="./index.html">back</a>
