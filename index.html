@@ -99,7 +99,7 @@
                     <label for="customRange1" class="form-label">NEURONS (per layer)</label>
                     <input
                         type="range"
-                        min="1" max="20"
+                        min="1" max="100"
                         step="1"
                         value="5"
                         class="form-range"
@@ -107,14 +107,14 @@
                     >
                 </div>
                 <div class="setup-item">
-                    <label for="customRange1" class="form-label">SCATTER</label>
+                    <label for="customRange1" class="form-label">Post Synaptic Impuls <span id="amp"></span>(A)</label>
                     <input
                         type="range"
                         class="form-range"
-                        id="scatterValue"
-                        min="0" max="200"
-                        step="1"
-                        value="5"
+                        id="postSynapticImpuls"
+                        min="0" max="0.1"
+                        step="0.001"
+                        value="0.08"
                     >
                 </div>
                 <div class="setup-item">
