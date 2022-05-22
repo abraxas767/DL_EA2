@@ -217,9 +217,6 @@ function setupNeurons(){
       neuron.x = getRandomNumberBetween(0, width);
       neuron.y = getRandomNumberBetween(0, height);
       neuron.c = color(255, 204, 185);
-      if(RANDOMIZE_POTENTIAL){
-        neuron.potential = getRandomNumberBetween(5, 60);
-      }
       neuralNet.push(neuron);
   }
 }

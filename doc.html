@@ -6,7 +6,7 @@
     html, body{
         margin: 0;
         padding: 0;
-        background: #111;
+        background: #222;
         color: rgb(255, 204, 0);
         font-family: 'Helvetica';
         font-weight: lighter;
@@ -23,11 +23,18 @@
         width: 100%;
         height: 300px;
     }
+    #spacing2 {
+        width: 100%;
+        height: 100px;
+    }
     h1 {
         font-size: 40px;
     }
     h2 {
         font-weight: lighter;
+    }
+    h3 {
+        color: orange;
     }
     #back {
         position: absolute;
@@ -36,6 +43,15 @@
         color: orange;
         text-decoration: none;
         font-size: 20px;
+    }
+    section {
+        color: #fff;
+    }
+    .text-wrap {
+        width: 84%;
+    }
+    img {
+        width: 100%;
     }
   </style>
 
@@ -49,6 +65,75 @@
       <h1>Deep Learning - EA2</h1>
       <h2>Spiking Neural Networks</h2>
 
+      <div id="spacing2"></div>
+
+      <section>
+
+        <h3>Tech Stack</h3>
+
+        <ul>
+          <li>JavaScript</li>
+          <li>canvasJS</li>
+          <li>p5.js</li>
+        </ul>
+
+        <div id="spacing2"></div>
+
+        <div class="text-wrap">
+            <h3>Neuronale Vernetzung in p5.js</h3>
+            <p>Um die Grundstruktur für das neuronale Netz zu erstellen und um dies später auch zu animieren, nutzte ich die wunderbare Bibliothek p5.js.
+            Diese ist sehr schnell und einfach zu lernen. Im Grunde gibt es zwei Hauptfunktionen, eine <code>setup()</code> - Funktion die die "canvas"
+            initialisiert und die <code>draw()</code> - Methode die einmal pro Frame aufgerufen wird. Dies wird insofern wichig als dass ich später als
+            zeitliche Einheit die Framerate (Frames pro Sekunde) nutze um die Änderungsrate der Membranspannung eines Neurons zu berechnen.
+            </p>
+            <p>
+              Um die Neuronen zu initialisieren schreiben wir eine einfache Funktion welche zum Start der Anwendung
+              ausgeführt wird:
+            </p>
+            <pre>
+            <code>
+function setupNeurons(){
+    for(let i=1;i<=NEURON_COUNT;i++){
+        let neuron = new Neuron();
+        neuron.x = getRandomNumberBetween(0, width);
+        neuron.y = getRandomNumberBetween(0, height);
+        neuron.c = color(255, 204, 185);
+        neuralNet.push(neuron);
+    }
+}
+            </code></pre>
+            <p>Der Array neuralNet hält hierbei unsere einzelnen Neuronen. Das Neuron-Objekt ist bis zu diesem Zeitpunkt noch sehr leer. Etwas anspruchsvoller ist die Funktion um die Synapsen zu erstellen. Dabei nutzen wir den Wert SYNAPTIC_PROB (synaptic-probability) um die Wahrscheinlichkeit für eine Synapse anzupassen.</p>
+
+            <pre><code>
+function setupSynapes(){
+  neuralNet.forEach((neuron)=>{
+    neuralNet.forEach((dNeuron)=>{
+      // return if connection was already made
+      if(dNeuron.synapses.includes(neuron) && !BACKWARDS_CONNECTIONS){return;}
+      // return if neuron inspects itself haha
+      if(neuron == dNeuron){return;}
+      // calculate distance from each neuron to each other neuron
+      let xDist = Math.abs(neuron.x - dNeuron.x);
+      let yDist = Math.abs(neuron.y - dNeuron.y);
+      // absolute distance between the two neurons
+      let absDist = Math.sqrt(xDist**2 + yDist**2);
+      // We dont want the chance for connection to be 100% even for close by neurons
+      let probScalar = 1 + Math.random();
+      if(absDist*0.001 * probScalar <= SYNAPTIC_PROB){
+        neuron.synapses.push(dNeuron);
+        neuron.synapticWeights.push(INITIAL_WEIGHT);
+      }
+    });
+  });
+}
+            </code></pre>
+        </div>
+
+        <p>Resultat: </p>
+        <img src="./img/dl.png" alt="" />
+
+      </section>
+      <div id="spacing"></div>
 
     </div>
   </div>
