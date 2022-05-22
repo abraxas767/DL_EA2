@@ -59,7 +59,7 @@
              margin-top: 20px;
              width: 100%;
              display: flex;
-            justify-content: space-between;
+            justify-content: right;
          }
          #underChart div{
              display: flex;
@@ -72,6 +72,9 @@
             margin: 20px;
             font-size: 20px;
             color: orange;
+         }
+         button {
+             margin-left: 10px;
          }
         </style>
 
@@ -122,7 +125,7 @@
                     >
                 </div>
                 <div class="setup-item">
-                    <label for="customRange1" class="form-label">NEURONS <span id="neuronCountDisplay">(30)</span></label>
+                    <label for="customRange1" class="form-label">Neurons <span id="neuronCountDisplay">(30)</span></label>
                     <input
                         type="range"
                         min="1" max="100"
@@ -144,7 +147,7 @@
                     >
                 </div>
                 <div class="setup-item">
-                    <label for="customRange1" class="form-label">SYNAPTIC CHANCE</label>
+                    <label for="customRange1" class="form-label">Synaptic chance</label>
                     <input
                         type="range"
                         class="form-range"
@@ -173,20 +176,16 @@
         <div class="container">
             <div id="chartContainer"></div>
             <div id="underChart">
-                <div>
-                    <p>Layer: <span id="selectedLayer">NULL</span>, </p>
-                    <p>Neuron: <span id="selectedNeuron">NULL</span></p>
-                </div>
                 <button
                     type="button"
                     id="stimulate"
                     class="btn btn-warning"
-                >stimulate</button>
+                >stimulate (Impuls)</button>
                 <button
                     type="button"
                     id="constant"
                     class="btn btn-warning"
-                >constant</button>
+                >constant current </button>
             </div>
         </div>
 

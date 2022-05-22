@@ -2,8 +2,8 @@ const NET_PADDING = 0.5;
 let stimulusDisplay = null;
 
 let LAYER_COUNT = 5;
-let NEURON_COUNT = 2;
-let SYNAPTIC_PROB = 1;
+let NEURON_COUNT = 30;
+let SYNAPTIC_PROB = 0.3;
 let SCATTER = 0;
 let STIMULATION = 5;
 let MODEL = 'blob';
@@ -38,6 +38,8 @@ let postSynapticImpulsDisplay = null;
 let neuronCountDisplay = null;
 let weightDecayDisplay = null;
 let learningRateDisplay = null;
+
+let networkActivity = 0; // spikes per 100ms
 
 class Neuron {
   // I = Q/t
@@ -160,8 +162,6 @@ function setupCanvas(){
   synapticSlider.elt.oninput = () => {SYNAPTIC_PROB = synapticSlider.elt.value;applyChanges();}
   let redraw = select('#redraw');
   redraw.elt.onclick = () => {applyChanges();}
-  selectedLayerDisplay = select('#selectedLayer');
-  selectedNeuronDisplay = select('#selectedNeuron');
 
 
   let constantStimulation = select('#constant');
@@ -230,8 +230,6 @@ function setup(){
 
 function onNeuronSelect(neuron){
   selectedNeuron = neuron;
-  selectedNeuronDisplay.elt.innerHTML = neuron.index;
-  selectedLayerDisplay.elt.innerHTML = neuron.layer;
 }
 
 function arrayRemove(arr, value) {
@@ -240,6 +238,7 @@ function arrayRemove(arr, value) {
     });
 }
 function onThresholdCrossed(neuron){
+  networkActivity++;
   neuron.synapses.forEach((pNeuron, index) => {
     let weight = neuron.synapticWeights[index];
     pNeuron.impulses.push({t: Date.now(), w: weight});
@@ -264,7 +263,7 @@ function onHoverNeuron(neuron){
   neuron.impulses.forEach((impuls)=> {
     if(Date.now() - impuls.t <= 100){
       preSynapticCurrent = impuls.w * ((POST_SYNAPTIC_IMPULSE * neuron.MEMBRANE_RESISTANCE) / Math.floor(fps));
-    } else if(Date.now() - impuls.t <= 0){
+    } else {
       neuron.impulses = arrayRemove(neuron.impulses, impuls);
     }
   });
