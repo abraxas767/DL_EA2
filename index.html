@@ -25,7 +25,7 @@
          }
          .p5Container{
              width: 100%;
-             background: red;
+             background: #111;
              overflow: hidden;
              display: flex;
              justify-content: center;
@@ -64,6 +64,15 @@
          #underChart div{
              display: flex;
          }
+         .header{
+             display: flex;
+             justify-content: space-between;
+         }
+         a {
+            margin: 20px;
+            font-size: 20px;
+            color: orange;
+         }
         </style>
 
     </head>
@@ -77,26 +86,43 @@
         ></script>
         <script src="./main.js" type="text/javascript"></script>
 
-        <h1>(SNN)</h1>
+        <div class="header">
+          <h1>Spiking Neural Networks - Visualization</h1>
+          <a href="./doc.html">Documentation</a>
+        </div>
 
         <!-- P5 - CANVAS -->
         <div id="canvas-container" class="p5Container"></div>
 
         <div class="container">
             <div class="setup">
+
                 <div class="setup-item">
-                    <label for="customRange1" class="form-label">LAYERS</label>
+                    <label for="customRange1" class="form-label">Synaptic Weight Decay <span id="weightDecayDisplay">0.06</span></label>
                     <input
                         type="range"
-                        min="1" max="20"
-                        step="1"
-                        value="5"
+                        min="0" max="0.05"
+                        step="0.0001"
+                        value="0.0001"
                         class="form-range"
-                        id="layerCount"
+                        id="weightDecay"
+                    >
+                </div>
+
+
+                <div class="setup-item">
+                    <label for="customRange1" class="form-label">Learningrate <span id="learningRateDisplay">0.06</span></label>
+                    <input
+                        type="range"
+                        min="0" max="4"
+                        step="0.01"
+                        value="0.06"
+                        class="form-range"
+                        id="learningRate"
                     >
                 </div>
                 <div class="setup-item">
-                    <label for="customRange1" class="form-label">NEURONS (per layer)</label>
+                    <label for="customRange1" class="form-label">NEURONS <span id="neuronCountDisplay">(30)</span></label>
                     <input
                         type="range"
                         min="1" max="100"
@@ -107,12 +133,12 @@
                     >
                 </div>
                 <div class="setup-item">
-                    <label for="customRange1" class="form-label">Post Synaptic Impuls <span id="amp"></span>(A)</label>
+                    <label for="customRange1" class="form-label">Post Synaptic Impuls <span id="amp">0.08</span>(A)</label>
                     <input
                         type="range"
                         class="form-range"
                         id="postSynapticImpuls"
-                        min="0" max="0.1"
+                        min="0" max="0.2"
                         step="0.001"
                         value="0.08"
                     >

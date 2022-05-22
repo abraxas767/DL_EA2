@@ -19,10 +19,10 @@ let selectedLayerDisplay = "null";
 let selectedNeuronDisplay = "null";
 let selectedNeuronSynapses = null;
 
-const WEIGHT_DECAY = 0.001;
-const LEARNING_RATE = 0.06;
+let WEIGHT_DECAY = 0.0001;
+let LEARNING_RATE = 0.06;
 let POST_SYNAPTIC_IMPULSE = 0.08; // Ampere
-const INITIAL_WEIGHT = 0.5;
+let INITIAL_WEIGHT = 0.5;
 let CONST_INPUT_CURRENT = 0 // Ampere pro sekunde
 
 // for dynamic chart
@@ -35,6 +35,9 @@ let fps = 60;
 
 
 let postSynapticImpulsDisplay = null;
+let neuronCountDisplay = null;
+let weightDecayDisplay = null;
+let learningRateDisplay = null;
 
 class Neuron {
   // I = Q/t
@@ -68,7 +71,7 @@ class Neuron {
 }
 
 function clearNeuralNet(){neuralNet = [];}
-function applyChanges(){clearNeuralNet();setupNeurons();setupSynapes();}
+function applyChanges(){clearNeuralNet();setupNeurons();setupSynapes();selectedNeuron=null;}
 
 function setupDynamicChart(){
   var dps = [];
@@ -88,7 +91,7 @@ function setupDynamicChart(){
       markerType: "none",
     }]
   })
-  var updateInterval = 10;
+  var updateInterval = 5;
   // number of points visible at any point in time
   var dataLength = 800;
 
@@ -123,17 +126,36 @@ function setupCanvas(){
   selectedNeuronSynapses = select("#synapses");
 
   // get slider values
-  let layerSlider = select('#layerCount');
-  layerSlider.elt.oninput = () =>{LAYER_COUNT = layerSlider.elt.value;applyChanges();}
+  let learningRateSlider = select('#learningRate');
+  learningRateDisplay = select('#learningRateDisplay');
+  learningRateSlider.elt.oninput = () =>{
+    LEARNING_RATE = learningRateSlider.elt.value;
+    learningRateDisplay.elt.innerText = LEARNING_RATE;
+  };
+
+
   let neuronSlider = select('#neuronCount');
-  neuronSlider.elt.oninput = () =>{NEURON_COUNT = neuronSlider.elt.value;applyChanges();}
+  neuronCountDisplay = select('#neuronCountDisplay');
+  neuronSlider.elt.oninput = () =>{
+    NEURON_COUNT = neuronSlider.elt.value;
+    neuronCountDisplay.elt.innerText = NEURON_COUNT;
+    applyChanges();
+  }
+
+  let weightDecaySlider = select('#weightDecay');
+  weightDecayDisplay = select('#weightDecayDisplay');
+  weightDecaySlider.elt.oninput = () => {
+    WEIGHT_DECAY = weightDecaySlider.elt.value;
+    weightDecayDisplay.elt.innerText = WEIGHT_DECAY;
+  }
+
+
   let postSynapticImpulsSlider = select('#postSynapticImpuls');
+  postSynapticImpulsDisplay = select('#amp');
   postSynapticImpulsSlider.elt.oninput = () => {
     POST_SYNAPTIC_IMPULSE = postSynapticImpulsSlider.elt.value;
     postSynapticImpulsDisplay.elt.innerText = POST_SYNAPTIC_IMPULSE;
-    applyChanges();
   }
-  postSynapticImpulsDisplay = select('#amp');
   let synapticSlider = select('#synapticProb');
   synapticSlider.elt.oninput = () => {SYNAPTIC_PROB = synapticSlider.elt.value;applyChanges();}
   let redraw = select('#redraw');
@@ -244,7 +266,7 @@ function onHoverNeuron(neuron){
 
   neuron.impulses.forEach((impuls)=> {
     if(Date.now() - impuls.t <= 100){
-      preSynapticCurrent = (POST_SYNAPTIC_IMPULSE * neuron.MEMBRANE_RESISTANCE) / Math.floor(fps);
+      preSynapticCurrent = impuls.w * ((POST_SYNAPTIC_IMPULSE * neuron.MEMBRANE_RESISTANCE) / Math.floor(fps));
     } else if(Date.now() - impuls.t <= 0){
       neuron.impulses = arrayRemove(neuron.impulses, impuls);
     }
@@ -283,6 +305,10 @@ function onHoverNeuron(neuron){
       let neuronalActivity = LEARNING_RATE * ((1 - neuron.synapticWeights[index]) * preSynapticActivity * postSynapticActivity);
       neuron.synapticWeights[index] += neuronalActivity - (WEIGHT_DECAY * neuron.synapticWeights[index])
     });
+
+    if(selectedNeuron == neuron){
+      log_every(4, neuron.synapticWeights);
+    }
 
   }
 
