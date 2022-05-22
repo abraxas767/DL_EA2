@@ -17,13 +17,16 @@ let drawSynapses = [];
 let selectedNeuron = null;
 let selectedLayerDisplay = "null";
 let selectedNeuronDisplay = "null";
+let selectedNeuronSynapses = null;
 
 // Input current: I = Q/t -> charge / time
 const INPUT_CHARGE = 500; // C -> coulomb
-const IMPULS_TIME
-= 200; // ms -> milliseconds
+const IMPULS_TIME = 200; // ms -> milliseconds
 const INPUT_U = 1.5// in volt
-const INPUT_CURRENT = 0.006;
+const INPUT_CURRENT = 0.008;
+const WEIGHT_DECAY = 0.0001;
+const LEARNING_RATE = 0.05;
+const INITIAL_WEIGHT = 1;
 let CONST_INPUT_CURRENT = 0 // Ampere pro sekunde
 
 // for dynamic chart
@@ -116,6 +119,8 @@ function setupCanvas(){
   let currentStimulus = select('#currentStimulus');
   stimulusDisplay = currentStimulus;
 
+  selectedNeuronSynapses = select("#synapses");
+
   // get slider values
   let layerSlider = select('#layerCount');
   layerSlider.elt.oninput = () =>{LAYER_COUNT = layerSlider.elt.value;applyChanges();}
@@ -196,9 +201,10 @@ function setupSynapes(){
         let probScalar = 1 + Math.random();
         if(absDist*0.001 * probScalar <= SYNAPTIC_PROB){
           neuron.synapses.push(dNeuron);
-          neuron.synapticWeights.push(1);
+          neuron.synapticWeights.push(INITIAL_WEIGHT);
         }
       });
+      console.log(neuron.synapticWeights);
     });
   }
 }
@@ -226,7 +232,7 @@ function setupNeurons(){
 
   // BLOB ARCHITECTURE
   } else if(MODEL == 'blob'){
-    for(let i=1;i<=NEURON_COUNT**2;i++){
+    for(let i=1;i<=NEURON_COUNT;i++){
         let neuron = new Neuron();
         neuron.x = getRandomNumberBetween(0, width);
         neuron.y = getRandomNumberBetween(0, height);
@@ -253,13 +259,15 @@ function onNeuronSelect(neuron){
 }
 
 function onThresholdCrossed(neuron){
-  console.log("spiked");
+
+  neuron.synapses.forEach((pNeuron, index) => {
+    let weight = neuron.synapticWeights[index];
+    pNeuron.currentMembranePotential += (INPUT_CURRENT * weight);
+  });
+
   // reset to resting potential
   neuron.currentMembranePotential = neuron.RESTING_POTENTIAL;
-  // eqv. tell all synapses to start firing
-  neuron.synapses.forEach((pNeuron)=>{
-    pNeuron.stimulateDT = Date.now();
-  });
+  let cir = circle(neuron.x, neuron.y, neuron.diameter + 20);
 }
 
 function log_every(intervall, log){
@@ -270,7 +278,6 @@ function log_every(intervall, log){
 
 function onHoverNeuron(neuron){
 
-
   // I = R / u
 
   let tau = 1 / Math.floor(fps);
@@ -279,16 +286,33 @@ function onHoverNeuron(neuron){
 
   let relCurrent = CONST_INPUT_CURRENT / (Math.floor(fps));
 
-  neuron.currentMembranePotential += leaky_current + relCurrent;
+  if(neuron == selectedNeuron){
+    neuron.currentMembranePotential += relCurrent;
+  }
+
+  neuron.currentMembranePotential += leaky_current;
 
   if(neuron.currentMembranePotential >= neuron.threshold){onThresholdCrossed(neuron);}
 
 
-  for(let s=0;s<neuron.synapses.length;s++){
-    if(Date.now() - neuron.synapses[s].stimulateDT >= IMPULS_TIME && neuron.synapses[s] != selectedNeuron){
-      neuron.synapses[s].stimulateDT = null;
-    }
+  if(neuron.synapticWeights.length != 0){
+
+    neuron.synapses.forEach((pNeuron, index) =>{
+      let synapticWeight = neuron.synapticWeights[index];
+      let preSynapticActivity = (neuron.currentMembranePotential - neuron.RESTING_POTENTIAL) / (neuron.threshold - neuron.RESTING_POTENTIAL)
+      let postSynapticActivity = (pNeuron.currentMembranePotential - pNeuron.RESTING_POTENTIAL) / (pNeuron.threshold - pNeuron.RESTING_POTENTIAL);
+
+      let neuronalActivity = LEARNING_RATE * ((1 - neuron.synapticWeights[index]) * preSynapticActivity * postSynapticActivity);
+      neuron.synapticWeights[index] += neuronalActivity - (WEIGHT_DECAY * neuron.synapticWeights[index])
+    });
+
   }
+
+  // for(let s=0;s<neuron.synapses.length;s++){
+  //   if(Date.now() - neuron.synapses[s].stimulateDT >= IMPULS_TIME && neuron.synapses[s] != selectedNeuron){
+  //     neuron.synapses[s].stimulateDT = null;
+  //   }
+  // }
 
   // integrate leaky model
   //if(neuron.currentMembranePotential > neuron.RESTING_POTENTIAL){}
