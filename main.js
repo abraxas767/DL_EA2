@@ -294,8 +294,8 @@ function onHoverNeuron(neuron){
 
   if(neuron.synapticWeights.length != 0){
 
+    // for every synapse
     neuron.synapses.forEach((pNeuron, index) =>{
-      let synapticWeight = neuron.synapticWeights[index];
       let preSynapticActivity = (neuron.currentMembranePotential - neuron.RESTING_POTENTIAL) / (neuron.threshold - neuron.RESTING_POTENTIAL)
       let postSynapticActivity = (pNeuron.currentMembranePotential - pNeuron.RESTING_POTENTIAL) / (pNeuron.threshold - pNeuron.RESTING_POTENTIAL);
 
@@ -303,9 +303,10 @@ function onHoverNeuron(neuron){
       neuron.synapticWeights[index] += neuronalActivity - (WEIGHT_DECAY * neuron.synapticWeights[index])
     });
 
+    /*
     if(selectedNeuron == neuron){
       log_every(4, neuron.synapticWeights);
-    }
+    }*/
 
   }
 

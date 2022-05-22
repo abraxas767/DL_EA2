@@ -214,11 +214,38 @@ neuron.impulses.forEach((impuls)=> {
 });
               </code>
             </pre>
-            <p>Wie schon vorher rechnen wir hier auch immer die zeitliche Komponente fps (Frames per second) mit ein um eine akkurate Repräsentation unserer Stromstärke über die Zeit zu bekommen. Schon jetzt können wir sehen wie sich das Netz aufschaukeln kann und das Ausgangsneuron selbst nach Abbruch externer Stimulation weiterhin Signale empfängt. Grün markiert hier die Dauer des externen Stimulus. Der weitere Verlauf ist durch eingehende Impulse verbundener Neuronen zu erklären.</p>
+            <p>Wie schon vorher rechnen wir hier auch immer die zeitliche Komponente fps (Frames per second) mit ein um eine akkurate Repräsentation unserer Stromstärke über die Zeit zu bekommen. Schon jetzt können wir sehen wie sich das Netz aufschaukeln kann und das Ausgangsneuron selbst nach Abbruch externer Stimulation weiterhin Signale empfängt. Grün markiert hier die Dauer des externen Stimulus. Der weitere Verlauf ist durch eingehende Impulse verbundener Neuronen zu erklären. Das Spikes hier nicht bei perfektem Threshold dargestellt werden hängt damit zusammen dass die Aktualisierung des Graphen nicht in jedem Frame stattfindet, sondern nur in etwa alle 10ms. Somit wird immer ein bisschen Information fehlen.</p>
 
             <img src="./img/xCurrent.png" alt="" />
 
             <h3>Hebbs Rule</h3>
+
+            <p>
+              Als nächstes schauen wir uns an wie wir Hebbs Rule mit einbinden können in unsere Simulation. Zunächst initialisieren wir alle Gewichte des Netzwerks mit einem Startwert, beispielsweise 0,5. Zunächst implementieren wir den Gewichtsverfall. Synapsen die nicht aktiv sind verlieren ihre Wirksamkeit -> ihr Gewicht nimmt ab.
+            </p>
+        <pre>
+          <code>
+neuron.synapticWeights[index] += - ( WEIGHT_DECAY * neuron.synapticWeights[index] );
+          </code>
+        </pre>
+
+        <p>Somit haben wir ähnlich wie bei dem vorher implementierten Spannungsabfall eine exponentielle Abnahme des synaptischen Gewichts. Wie können wir nun die pre- bzw. postsynaptische
+        Aktivität messen? In diesem Beispiel nehmen wir hierfür den normalisierten Wert des Membranpotentials beider Neuronen. Sind beide Neuronen stark aktiv, steigt das synaptische Gewicht. Andernfalls nähert er sich durch die vorhin beschriebene Verfallsfunktion gegen 0 an. Nun können wir noch die Lernrate einführen welche als Skalar der eben berechneten Aktivitäten dient. Somit können wir bestimmen wie schnell eine synaptische Verbindung stärker wird. Alles in allem sieht das dann so aus:</p>
+
+<pre>
+  <code>
+neuron.synapses.forEach((pNeuron, index) =>{
+
+  // presynaptic activity -> normalized value of presynaptic membranpotential
+  let preSynapticActivity = (neuron.currentMembranePotential - neuron.RESTING_POTENTIAL) / (neuron.threshold - neuron.RESTING_POTENTIAL)
+  // post synaptic activity -> normalized value of postsynaptic membranpotential
+  let postSynapticActivity = (pNeuron.currentMembranePotential - pNeuron.RESTING_POTENTIAL) / (pNeuron.threshold - pNeuron.RESTING_POTENTIAL);
+
+  let neuronalActivity = LEARNING_RATE * ((1 - neuron.synapticWeights[index]) * preSynapticActivity * postSynapticActivity);
+  neuron.synapticWeights[index] += neuronalActivity - (WEIGHT_DECAY * neuron.synapticWeights[index])
+});
+  </code>
+</pre>
 
       </section>
 
